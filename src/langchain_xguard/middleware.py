@@ -40,7 +40,11 @@ class XGuardMiddleware(RunnableSerializable[Any, Any], ABC):
         client: Optional[XGuardClient] = None,
         policy_engine: Optional[PolicyEngine] = None,
         policy: Optional[str] = None,
-        api_key: Optional[str] = None,
+        model_name: Optional[str] = None,
+        device_map: str = "auto",
+        torch_dtype: str = "auto",
+        cache_enabled: bool = True,
+        lazy_load: bool = True,
         policy_path: Optional[str] = None,
         **kwargs,
     ):
@@ -51,11 +55,28 @@ class XGuardMiddleware(RunnableSerializable[Any, Any], ABC):
             client: XGuardClient instance (created if not provided)
             policy_engine: PolicyEngine instance (created if not provided)
             policy: Policy name to use
-            api_key: API key for XGuard (if creating client)
+            model_name: Model name for XGuard client (if creating client)
+            device_map: Device map for model loading
+            torch_dtype: Torch dtype for model loading
+            cache_enabled: Enable caching
+            lazy_load: Lazy load model
             policy_path: Path to policy file (if creating policy engine)
         """
         super().__init__(**kwargs)
-        self.client = client or XGuardClient(api_key=api_key)
+        if client is None:
+            client_kwargs = {
+                "cache_enabled": cache_enabled,
+                "lazy_load": lazy_load,
+            }
+            if model_name is not None:
+                client_kwargs["model_name"] = model_name
+            if device_map != "auto":
+                client_kwargs["device_map"] = device_map
+            if torch_dtype != "auto":
+                client_kwargs["torch_dtype"] = torch_dtype
+            self.client = XGuardClient(**client_kwargs)
+        else:
+            self.client = client
         self.policy_engine = policy_engine or PolicyEngine(policy_path=policy_path)
         self.policy_name = policy
     
