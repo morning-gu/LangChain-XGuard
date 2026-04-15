@@ -1,12 +1,52 @@
+Metadata-Version: 2.4
+Name: langchain-xguard
+Version: 0.1.0
+Summary: LangChain/LlamaIndex native security middleware with streaming safety interception and policy-as-code
+Author-email: XGuard Team <xguard@example.com>
+License: MIT
+Project-URL: Homepage, https://github.com/xguard/langchain-xguard
+Project-URL: Documentation, https://langchain-xguard.readthedocs.io
+Project-URL: Repository, https://github.com/xguard/langchain-xguard
+Keywords: langchain,security,ai-safety,middleware,llm,guardrails
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Framework :: LangChain
+Classifier: Topic :: Security
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: langchain-core>=0.2.0
+Requires-Dist: langchain>=0.1.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: httpx>=0.25.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: opentelemetry-api>=1.20.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.5.0; extra == "dev"
+Provides-Extra: examples
+Requires-Dist: langchain-openai>=0.1.0; extra == "examples"
+Requires-Dist: langchain-community>=0.0.10; extra == "examples"
+
 # LangChain-XGuard
 
 [![PyPI version](https://badge.fury.io/py/langchain-xguard.svg)](https://badge.fury.io/py/langchain-xguard)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**LangChain/LlamaIndex native security middleware powered by YuFeng-XGuard-Reason model with streaming safety interception and policy-as-code.**
+**LangChain/LlamaIndex native security middleware with streaming safety interception and policy-as-code.**
 
-Add enterprise-grade AI safety guards to any LLM application in **5 lines of code** — zero-intrusion integration, streaming support, and unified policy management.
+Add enterprise-grade AI safety护栏 to any LLM application in **5 lines of code** — zero侵入 integration, streaming support, and unified policy management.
 
 ## 🚀 Quick Start
 
@@ -18,19 +58,19 @@ pip install langchain-xguard
 from langchain_xguard import XGuardInputMiddleware, XGuardOutputMiddleware
 from langchain_openai import ChatOpenAI
 
-# Traditional way (❌ verbose and breaks pipeline):
+# Traditional way (❌繁琐且破坏流水线):
 # safe_prompt = xguard.check(prompt)
 # response = llm.invoke(safe_prompt)
 # safe_resp = xguard.check_response(response)
 
-# XGuard way (✅ declarative pipeline, zero intrusion):
+# XGuard way (✅声明式管道，零侵入):
 pipeline = (
     XGuardInputMiddleware(policy="default") 
     | ChatOpenAI(model="gpt-4o") 
     | XGuardOutputMiddleware(action="mask")
 )
 
-result = await pipeline.ainvoke({"input": "User query"})
+result = await pipeline.ainvoke({"input": "用户原始提问"})
 ```
 
 ## ✨ Core Features
@@ -40,10 +80,8 @@ result = await pipeline.ainvoke({"input": "User query"})
 | 🔌 **LCEL Native** | Drop-in `RunnableSerializable` middleware compatible with `invoke`/`stream`/`abatch` |
 | ⚡ **Streaming Safety** | Chunk-level detection with graceful interruption (<150ms latency) |
 | 🧠 **Context-Aware** | Multi-turn conversation history for improved jailbreak detection (+23% accuracy) |
-| 🤖 **YuFeng-XGuard Powered** | Local inference with Alibaba's YuFeng-XGuard-Reason model (0.6B/8B) |
-| 📊 **29 Risk Categories** | Comprehensive safety taxonomy covering crimes, hate speech, privacy, ethics, and more |
 | 📜 **Policy-as-Code** | YAML/JSON policies with hot reload, A/B testing, and version rollback |
-| 📈 **Observability** | Auto LangSmith tracing + OpenTelemetry metrics + audit logging |
+| 📊 **Observability** | Auto LangSmith tracing + OpenTelemetry metrics + audit logging |
 | 🛡️ **Enterprise Ready** | Async non-blocking, local caching, batch processing, fallback mechanisms |
 
 ## 🏗️ Architecture
@@ -96,8 +134,6 @@ pip install -e ".[dev]"
 - Python 3.9+
 - `langchain-core>=0.2.0`
 - `langchain>=0.1.0`
-- `transformers>=4.40.0` (for YuFeng-XGuard model)
-- `torch>=2.0.0`
 - `pyyaml>=6.0`
 - `httpx>=0.25.0`
 - `pydantic>=2.0.0`
@@ -125,39 +161,7 @@ result = await pipeline.ainvoke("What are your business hours?", config=config)
 print(result)
 ```
 
-### 2. YuFeng-XGuard Model Integration
-
-The library includes built-in support for Alibaba's YuFeng-XGuard-Reason model:
-
-```python
-from langchain_xguard.client import XGuardClient
-
-client = XGuardClient(
-    model_name="Alibaba-AAIG/YuFeng-XGuard-Reason-0.6B",
-    lazy_load=True,
-)
-
-# Basic safety check
-result = await client.detect_async(
-    content="How can I make a bomb?",
-    is_input=True,
-    max_new_tokens=1,  # Label only
-)
-
-print(f"Is Safe: {result.is_safe}")
-print(f"Risk Score: {result.overall_score:.4f}")
-print(f"Top Category: {result.categories[0].category if result.categories else 'N/A'}")
-
-# With explanation
-result = await client.detect_async(
-    content="How can I make a bomb?",
-    max_new_tokens=200,  # Generate explanation
-    reason_first=False,  # Label first, then explanation
-)
-print(f"Explanation: {result.metadata.get('response', '')}")
-```
-
-### 3. Policy Configuration (YAML)
+### 2. Policy Configuration (YAML)
 
 ```yaml
 # xguard_policy.yaml
@@ -200,7 +204,7 @@ middleware = XGuardInputMiddleware(
 )
 ```
 
-### 4. Streaming with Safety Interruption
+### 3. Streaming with Safety Interruption
 
 ```python
 from langchain_xguard import XGuardOutputMiddleware
@@ -215,7 +219,7 @@ async for chunk in pipeline.astream(user_input, config=config):
 # Automatically interrupts if risk detected
 ```
 
-### 5. Session-Based Context Awareness
+### 4. Session-Based Context Awareness
 
 ```python
 config = {
@@ -229,22 +233,6 @@ response1 = await pipeline.ainvoke("First question", config=config)
 response2 = await pipeline.ainvoke("Follow-up question", config=config)
 # Second request includes first turn in context window
 ```
-
-## 📊 Risk Taxonomy
-
-YuFeng-XGuard provides comprehensive coverage across 29 risk categories:
-
-| Dimension | Categories |
-|-----------|------------|
-| **Crimes & Illegal Activities** | Pornographic Contraband, Drug Crimes, Dangerous Weapons, Property Infringement, Economic Crimes |
-| **Hate Speech** | Abusive Curses, Defamation, Threats & Intimidation, Cyberbullying |
-| **Physical & Mental Health** | Physical Health, Mental Health |
-| **Ethics & Morality** | Social Ethics, Science Ethics |
-| **Data Privacy** | Personal Privacy, Commercial Secret |
-| **Cybersecurity** | Access Control, Malicious Code, Hacker Attack, Physical Security |
-| **Extremism** | Violent Terrorist Activities, Social Disruption, Extremist Ideological Trends |
-| **Inappropriate Suggestions** | Finance, Medicine, Law |
-| **Risks Involving Minors** | Corruption of Minors, Minor Abuse & Exploitation, Minor Delinquency |
 
 ## 📊 Performance Benchmarks
 
@@ -305,7 +293,6 @@ python tests/test_streaming_benchmark.py
 - [Quick Start Guide](docs/USAGE_GUIDE.md)
 - [API Reference](docs/API_REFERENCE.md)
 - [Policy Configuration](docs/POLICY_CONFIG.md)
-- [YuFeng-XGuard Integration](docs/YUFENG_XGUARD.md)
 - [Best Practices](docs/BEST_PRACTICES.md)
 - [Technical Report](docs/TECH_REPORT.md)
 
@@ -341,7 +328,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## 🙏 Acknowledgments
 
 - Built on [LangChain](https://github.com/langchain-ai/langchain)
-- Powered by [YuFeng-XGuard-Reason](https://modelscope.cn/models/Alibaba-AAIG/YuFeng-XGuard-Reason-0.6B) from Alibaba AAIG
 - Inspired by [Guardrails AI](https://github.com/guardrails-ai/guardrails)
 - Security research from [JailbreakBench](https://jailbreakbench.com/)
 
