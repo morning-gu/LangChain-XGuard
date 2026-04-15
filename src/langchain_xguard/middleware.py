@@ -1,6 +1,7 @@
 """LangChain LCEL middleware for XGuard security integration."""
 
 import asyncio
+import re
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 from abc import ABC, abstractmethod
 
@@ -16,7 +17,10 @@ from langchain_xguard.policy import PolicyEngine, PolicyConfig
 from langchain_xguard.models import (
     Action,
     DetectionResult,
+    DetectionCategory,
     RiskLevel,
+    PolicyActionResult,
+    XGuardSafetyError,
 )
 
 
@@ -132,9 +136,6 @@ class XGuardMiddleware(RunnableSerializable[Any, Any], ABC):
         """
         config = config or {}
         
-        # Extract session ID from config if available
-        session_id = config.get("configurable", {}).get("session_id")
-        
         # Convert input to string for detection
         if isinstance(input, dict):
             content = input.get("input", input.get("content", str(input)))
@@ -181,6 +182,8 @@ class XGuardInputMiddleware(XGuardMiddleware):
     Input middleware for detecting unsafe user inputs.
     
     Placed before LLM in LCEL pipeline to block/rewrite malicious prompts.
+    When content is blocked, raises XGuardSafetyError to stop the pipeline
+    and prevent the request from reaching the LLM.
     """
     
     async def _detect_safety(
@@ -205,23 +208,35 @@ class XGuardInputMiddleware(XGuardMiddleware):
         original_content: str,
         config: RunnableConfig,
     ) -> Any:
-        """Apply action based on input detection result."""
-        policy = self.get_policy()
-        action = self.policy_engine.evaluate_action(result, policy, is_input=True)
+        """Apply action based on input detection result.
         
-        if action == Action.BLOCK:
-            # Return fallback message
-            return policy.fallback_message
-        elif action == Action.REWRITE:
+        BLOCK: Raises XGuardSafetyError to stop the pipeline.
+        REWRITE: Returns original content (not yet implemented).
+        LOG_ONLY: Logs risk info and allows content through.
+        ALLOW: Passes content through unchanged.
+        """
+        policy = self.get_policy()
+        action_result = self.policy_engine.evaluate_action(result, policy, is_input=True)
+        
+        if action_result.action == Action.BLOCK:
+            raise XGuardSafetyError(
+                action=Action.BLOCK,
+                detection_result=result,
+                triggered_categories=action_result.triggered_categories,
+                fallback_message=policy.fallback_message,
+            )
+        elif action_result.action == Action.REWRITE:
             # TODO: Implement rewrite logic with fallback LLM
-            # For now, return original content
+            # For now, log the risk and return original content
+            print(f"[XGuard] REWRITE action triggered but not yet implemented. "
+                  f"Risk: {action_result.risk_summary}")
             return original_content
-        elif action == Action.LOG_ONLY:
-            # Log and allow
-            # TODO: Integrate with logging/Observability
+        elif action_result.action == Action.LOG_ONLY:
+            print(f"[XGuard] LOG_ONLY: Risk detected in input. "
+                  f"Risk: {action_result.risk_summary}")
             return original_content
         else:
-            # ALLOW or default
+            # ALLOW
             return original_content
 
 
@@ -231,6 +246,12 @@ class XGuardOutputMiddleware(XGuardMiddleware):
     
     Placed after LLM in LCEL pipeline to mask/filter responses.
     Supports streaming chunk-level detection with graceful interruption.
+    
+    When unsafe content is detected:
+    - BLOCK: Raises XGuardSafetyError to stop the pipeline.
+    - MASK: Replaces the entire output with a safety notice listing risk types.
+    - REWRITE: Returns original content (not yet implemented).
+    - LOG_ONLY: Logs risk info and allows content through.
     """
     
     action: Action = Action.MASK  # Default action for output
@@ -258,34 +279,104 @@ class XGuardOutputMiddleware(XGuardMiddleware):
         original_content: str,
         config: RunnableConfig,
     ) -> Any:
-        """Apply action based on output detection result."""
-        policy = self.get_policy()
-        action = self.policy_engine.evaluate_action(result, policy, is_input=False)
+        """Apply action based on output detection result.
         
-        if action == Action.BLOCK:
-            return policy.fallback_message
-        elif action == Action.MASK:
-            # Simple masking - in production, would use entity recognition
-            sensitive_content = self._get_sensitive_content(result)
-            if sensitive_content:
-                return original_content.replace(sensitive_content, self.mask_pattern)
-            else:
-                # No sensitive content identified, return original
-                return original_content
-        elif action == Action.REWRITE:
+        BLOCK: Raises XGuardSafetyError to stop the pipeline.
+        MASK: Masks sensitive content based on detected risk categories.
+        REWRITE: Returns original content (not yet implemented).
+        LOG_ONLY: Logs risk info and allows content through.
+        ALLOW: Passes content through unchanged.
+        """
+        policy = self.get_policy()
+        action_result = self.policy_engine.evaluate_action(result, policy, is_input=False)
+        
+        if action_result.action == Action.BLOCK:
+            raise XGuardSafetyError(
+                action=Action.BLOCK,
+                detection_result=result,
+                triggered_categories=action_result.triggered_categories,
+                fallback_message=policy.fallback_message,
+            )
+        elif action_result.action == Action.MASK:
+            return self._mask_content(original_content, action_result)
+        elif action_result.action == Action.REWRITE:
             # TODO: Implement rewrite with fallback LLM
+            print(f"[XGuard] REWRITE action triggered but not yet implemented. "
+                  f"Risk: {action_result.risk_summary}")
             return original_content
-        elif action == Action.LOG_ONLY:
-            # Log and allow
+        elif action_result.action == Action.LOG_ONLY:
+            print(f"[XGuard] LOG_ONLY: Risk detected in output. "
+                  f"Risk: {action_result.risk_summary}")
             return original_content
         else:
+            # ALLOW
             return original_content
     
-    def _get_sensitive_content(self, result: DetectionResult) -> str:
-        """Extract sensitive content from detection result."""
-        # In production, this would use NER or pattern matching
-        # For now, return empty string (no masking)
-        return ""
+    def _mask_content(
+        self,
+        original_content: str,
+        action_result: PolicyActionResult,
+    ) -> str:
+        """Mask sensitive content in output based on detected risk categories.
+        
+        For PII categories, applies regex-based pattern masking.
+        For other categories, appends a safety notice with risk type details.
+        """
+        masked = original_content
+        pii_categories = []
+        other_categories = []
+        
+        for cat in action_result.triggered_categories:
+            if cat.category in (
+                "Data Privacy-Personal Privacy",
+                "Data Privacy-Commercial Secret",
+            ):
+                pii_categories.append(cat)
+            else:
+                other_categories.append(cat)
+        
+        # Apply PII pattern masking
+        if pii_categories:
+            masked = self._apply_pii_masking(masked)
+        
+        # For non-PII risks, append safety notice
+        if other_categories:
+            risk_types = ", ".join(
+                f"{cat.category}({cat.score:.0%})" for cat in other_categories
+            )
+            safety_notice = f"\n[SAFETY NOTICE] Content may contain: {risk_types}"
+            masked = masked + safety_notice
+        
+        return masked
+    
+    def _apply_pii_masking(self, content: str) -> str:
+        """Apply regex-based PII pattern masking to content."""
+        # Credit card numbers
+        content = re.sub(
+            r'\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b',
+            self.mask_pattern, content,
+        )
+        # Phone numbers (various formats)
+        content = re.sub(
+            r'\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b',
+            self.mask_pattern, content,
+        )
+        # Email addresses
+        content = re.sub(
+            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+            self.mask_pattern, content,
+        )
+        # SSN-like patterns
+        content = re.sub(
+            r'\b\d{3}-\d{2}-\d{4}\b',
+            self.mask_pattern, content,
+        )
+        # IP addresses
+        content = re.sub(
+            r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b',
+            self.mask_pattern, content,
+        )
+        return content
     
     async def astream(
         self,
@@ -301,17 +392,10 @@ class XGuardOutputMiddleware(XGuardMiddleware):
         policy = self.get_policy()
         session_id = config.get("configurable", {}).get("session_id")
         
-        # Get the next runnable in the chain
-        # This is called when middleware is part of a chain
-        
         # Buffer for accumulating chunks
         buffer: List[str] = []
         interrupted = False
         interruption_result: Optional[DetectionResult] = None
-        
-        # Process input through the chain
-        # Note: In actual LCEL usage, this wraps another runnable
-        # For standalone usage, we expect input to be the content
         
         if isinstance(input, dict):
             content = input.get("input", input.get("content", str(input)))
@@ -319,7 +403,6 @@ class XGuardOutputMiddleware(XGuardMiddleware):
             content = str(input)
         
         # Simulate streaming by yielding content in chunks
-        # In real usage, this would wrap an LLM's stream
         chunk_size = max(10, len(content) // self.chunk_threshold)
         
         for i in range(0, len(content), chunk_size):
@@ -331,7 +414,6 @@ class XGuardOutputMiddleware(XGuardMiddleware):
             
             # Check safety if buffer is large enough
             if len(buffer) >= self.chunk_threshold:
-                aggregated = "".join(buffer)
                 should_interrupt, result = await self.client.detect_stream_chunk_async(
                     chunk="",
                     buffer=buffer,
@@ -342,8 +424,13 @@ class XGuardOutputMiddleware(XGuardMiddleware):
                 if should_interrupt:
                     interrupted = True
                     interruption_result = result
-                    # Yield fallback message instead
-                    yield policy.fallback_message
+                    # Yield fallback message with risk info instead
+                    risk_info = ""
+                    if result.categories:
+                        top = max(result.categories, key=lambda c: c.score)
+                        if top.category != "Safe-Safe":
+                            risk_info = f" (Risk: {top.category}, score={top.score:.2f})"
+                    yield f"{policy.fallback_message}{risk_info}"
                     break
             
             # Yield current chunk
@@ -359,9 +446,9 @@ class XGuardOutputMiddleware(XGuardMiddleware):
         if not interrupted and len(buffer) < self.chunk_threshold:
             full_content = "".join(buffer)
             result = await self._detect_safety(full_content, config)
-            action = self.policy_engine.evaluate_action(result, policy, is_input=False)
+            action_result = self.policy_engine.evaluate_action(result, policy, is_input=False)
             
-            if action == Action.BLOCK:
+            if action_result.action == Action.BLOCK:
                 # Already yielded chunks, but we can't take them back
                 # In real streaming, we'd close the stream early
                 pass

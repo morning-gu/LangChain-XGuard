@@ -8,7 +8,12 @@ from datetime import datetime
 
 import yaml
 
-from langchain_xguard.models import PolicyConfig, Action, DetectionResult
+from langchain_xguard.models import (
+    PolicyConfig,
+    Action,
+    DetectionResult,
+    PolicyActionResult,
+)
 
 
 class PolicyEngine:
@@ -215,7 +220,7 @@ class PolicyEngine:
         result: DetectionResult,
         policy: Optional[PolicyConfig] = None,
         is_input: bool = True,
-    ) -> Action:
+    ) -> PolicyActionResult:
         """
         Evaluate what action to take based on detection result and policy.
         
@@ -225,7 +230,7 @@ class PolicyEngine:
             is_input: Whether this is input detection
             
         Returns:
-            Action to take
+            PolicyActionResult with action and triggered risk categories
         """
         if policy is None:
             policy = self.get_policy()
@@ -238,14 +243,24 @@ class PolicyEngine:
             thresholds = policy.output_thresholds
             base_action = policy.output_action
         
-        # Check if any category exceeds threshold
+        # Check if any category exceeds threshold, collecting all triggered categories
+        triggered_categories = []
         for category in result.categories:
+            # Skip safe category
+            if category.category == "Safe-Safe":
+                continue
             threshold = thresholds.get_threshold(category.category)
             if category.score >= threshold:
-                return base_action
+                triggered_categories.append(category)
+        
+        if triggered_categories:
+            return PolicyActionResult(
+                action=base_action,
+                triggered_categories=triggered_categories,
+            )
         
         # If no threshold exceeded, allow
-        return Action.ALLOW
+        return PolicyActionResult(action=Action.ALLOW)
     
     def create_inline_policy(
         self,
