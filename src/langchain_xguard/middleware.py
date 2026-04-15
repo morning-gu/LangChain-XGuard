@@ -45,6 +45,7 @@ class XGuardMiddleware(RunnableSerializable[Any, Any], ABC):
         torch_dtype: str = "auto",
         cache_enabled: bool = True,
         lazy_load: bool = True,
+        cache_dir: Optional[str] = None,
         policy_path: Optional[str] = None,
         **kwargs,
     ):
@@ -60,6 +61,7 @@ class XGuardMiddleware(RunnableSerializable[Any, Any], ABC):
             torch_dtype: Torch dtype for model loading
             cache_enabled: Enable caching
             lazy_load: Lazy load model
+            cache_dir: Custom directory for model storage. If None, uses default HuggingFace cache
             policy_path: Path to policy file (if creating policy engine)
         """
         super().__init__(**kwargs)
@@ -74,6 +76,8 @@ class XGuardMiddleware(RunnableSerializable[Any, Any], ABC):
                 client_kwargs["device_map"] = device_map
             if torch_dtype != "auto":
                 client_kwargs["torch_dtype"] = torch_dtype
+            if cache_dir is not None:
+                client_kwargs["cache_dir"] = cache_dir
             self.client = XGuardClient(**client_kwargs)
         else:
             self.client = client

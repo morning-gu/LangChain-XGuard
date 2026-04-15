@@ -75,6 +75,7 @@ class XGuardClient:
         cache_enabled: bool = True,
         cache_ttl: int = 300,
         lazy_load: bool = True,
+        cache_dir: Optional[str] = "./cache",
     ):
         """
         Initialize XGuard client with YuFeng-XGuard-Reason model.
@@ -86,12 +87,14 @@ class XGuardClient:
             cache_enabled: Enable local caching for repeated requests
             cache_ttl: Cache TTL in seconds
             lazy_load: Defer model loading until first inference
+            cache_dir: Custom directory for model storage. If None, uses default HuggingFace cache
         """
         self.model_name = model_name
         self.device_map = device_map
         self.torch_dtype = torch_dtype
         self.cache_enabled = cache_enabled
         self.cache_ttl = cache_ttl
+        self.cache_dir = cache_dir
         self._cache: Dict[str, tuple] = {}  # hash -> (result, timestamp)
         self._session_states: Dict[str, List[Dict]] = {}  # session_id -> conversation history
         
@@ -122,11 +125,15 @@ class XGuardClient:
         if self._loaded:
             return
         
-        self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        self._tokenizer = AutoTokenizer.from_pretrained(
+            self.model_name,
+            cache_dir=self.cache_dir
+        )
         self._model = AutoModelForCausalLM.from_pretrained(
             self.model_name,
             torch_dtype=self.torch_dtype,
             device_map=self.device_map,
+            cache_dir=self.cache_dir,
         ).eval()
         self._loaded = True
     
