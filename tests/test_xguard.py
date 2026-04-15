@@ -215,7 +215,8 @@ class TestXGuardClient:
             )
             
             assert result.is_safe is True
-            assert result.overall_score == 0.9
+            # For Safe-Safe category, overall_score is 1 - safety_score
+            assert abs(result.overall_score - 0.1) < 1e-6  # 1 - 0.9 = 0.1
             assert len(result.categories) >= 0
 
 
