@@ -4,11 +4,14 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
+*.pyc
+*.py~
+*.py.class
 *.so
-.coverage
-coverage/
-htmlcov/
+*.o
+*.a
+*.obj
+*.out
 
 # Distribution / packaging
 .Python
@@ -27,21 +30,26 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
-# Testing
-.pytest_cache/
-.hypothesis/
+MANIFEST
 
 # Environment
-.env
-.env.local
-*.env.*
+.venv/
+venv/
+env/
+ENV/
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*.tmp
 
-# OS
-.DS_Store
-Thumbs.db
+# Logs
+*.log
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
 ```
