@@ -238,14 +238,33 @@ class PolicyEngine:
             thresholds = policy.output_thresholds
             base_action = policy.output_action
         
-        # Check if any category exceeds threshold
+        # Check if any RISK category exceeds threshold
+        # Note: "Safe-Safe" is a special category indicating safe content, not a risk category
+        # High scores on "Safe-Safe" mean the content is safe, so we should NOT block
         for category in result.categories:
+            # Skip the "Safe-Safe" category as it indicates safety, not risk
+            if category.category == "Safe-Safe":
+                continue
+            
             threshold = thresholds.get_threshold(category.category)
             if category.score >= threshold:
                 return base_action
         
-        # If no threshold exceeded, allow
+        # If no risk threshold exceeded (or only Safe-Safe present), allow
         return Action.ALLOW
+    
+    def _is_safe_category(self, category_name: str) -> bool:
+        """
+        Check if a category name represents a safe/safety indicator rather than a risk.
+        
+        Args:
+            category_name: The category name to check
+            
+        Returns:
+            True if the category indicates safety (should not trigger blocking)
+        """
+        # "Safe-Safe" is the primary safety indicator from YuFeng-XGuard model
+        return category_name == "Safe-Safe"
     
     def create_inline_policy(
         self,
