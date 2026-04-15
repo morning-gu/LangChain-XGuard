@@ -1,0 +1,133 @@
+# XGuard Policy Configuration Example
+# Save this as `xguard_policy.yaml` and pass to PolicyEngine
+
+policies:
+  # Default policy - balanced security
+  default:
+    input:
+      thresholds:
+        jailbreak: 0.7
+        pii: 0.8
+        toxicity: 0.6
+        compliance: 0.75
+      action: block  # block | rewrite | log_only
+      fallback_message: "Your request cannot be processed due to safety concerns."
+    output:
+      thresholds:
+        jailbreak: 0.7
+        pii: 0.85
+        toxicity: 0.65
+        compliance: 0.75
+      action: mask  # mask | block | rewrite | log_only
+    enable_context: true
+    context_window: 5
+    cache_enabled: true
+    cache_ttl: 300
+
+  # Strict policy - maximum security
+  strict:
+    input:
+      thresholds:
+        jailbreak: 0.5
+        pii: 0.6
+        toxicity: 0.4
+        compliance: 0.6
+      action: block
+      fallback_message: "This request violates our safety guidelines."
+    output:
+      thresholds:
+        jailbreak: 0.5
+        pii: 0.7
+        toxicity: 0.5
+        compliance: 0.6
+      action: block
+    enable_context: true
+    context_window: 10
+    cache_enabled: true
+    cache_ttl: 600
+
+  # Lenient policy - minimal interference
+  lenient:
+    input:
+      thresholds:
+        jailbreak: 0.9
+        pii: 0.95
+        toxicity: 0.85
+        compliance: 0.9
+      action: log_only
+    output:
+      thresholds:
+        jailbreak: 0.9
+        pii: 0.95
+        toxicity: 0.85
+        compliance: 0.9
+      action: log_only
+    enable_context: false
+    context_window: 0
+    cache_enabled: true
+    cache_ttl: 120
+
+  # Custom policy with rewrite fallback
+  rewrite_fallback:
+    input:
+      thresholds:
+        jailbreak: 0.7
+        pii: 0.8
+        toxicity: 0.6
+      action: rewrite
+      fallback_llm: "qwen-turbo"  # Use smaller model for safe rewrite
+      fallback_message: "Let me rephrase your request safely..."
+    output:
+      thresholds:
+        compliance: 0.75
+      action: mask
+    enable_context: true
+    context_window: 3
+    cache_enabled: true
+    cache_ttl: 300
+
+  # Customer service specific
+  customer_service:
+    input:
+      thresholds:
+        jailbreak: 0.6
+        pii: 0.9  # Allow customers to share some info
+        toxicity: 0.5
+        custom:
+          competitor_mention: 0.8
+          pricing_inquiry: 0.3  # Route to sales
+      action: log_only
+    output:
+      thresholds:
+        pii: 0.95  # Never leak customer data
+        compliance: 0.8
+        custom:
+          promise_making: 0.7  # Don't over-promise
+      action: mask
+    enable_context: true
+    context_window: 8
+    cache_enabled: true
+    cache_ttl: 180
+
+  # Code assistant specific
+  code_assistant:
+    input:
+      thresholds:
+        jailbreak: 0.75
+        toxicity: 0.7
+        custom:
+          malicious_code_request: 0.8
+          vulnerability_exploit: 0.9
+      action: block
+      fallback_message: "I cannot help with potentially harmful code requests."
+    output:
+      thresholds:
+        compliance: 0.8
+        custom:
+          hardcoded_secrets: 0.9
+          insecure_patterns: 0.7
+      action: mask
+    enable_context: true
+    context_window: 5
+    cache_enabled: true
+    cache_ttl: 300
