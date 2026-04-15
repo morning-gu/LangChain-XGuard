@@ -266,10 +266,12 @@ class XGuardOutputMiddleware(XGuardMiddleware):
             return policy.fallback_message
         elif action == Action.MASK:
             # Simple masking - in production, would use entity recognition
-            return original_content.replace(
-                self._get_sensitive_content(result),
-                self.mask_pattern,
-            )
+            sensitive_content = self._get_sensitive_content(result)
+            if sensitive_content:
+                return original_content.replace(sensitive_content, self.mask_pattern)
+            else:
+                # No sensitive content identified, return original
+                return original_content
         elif action == Action.REWRITE:
             # TODO: Implement rewrite with fallback LLM
             return original_content
