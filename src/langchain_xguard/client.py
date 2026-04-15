@@ -407,22 +407,14 @@ class XGuardClient:
                     details={"explanation": result_dict['response']} if max_new_tokens > 1 else None,
                 ))
         
+        # Calculate overall score (max of all category scores)
+        overall_score = max([c.score for c in categories], default=0.0)
+        
         # Determine if safe (highest score is 'Safe-Safe')
         is_safe = False
-        top_category = None
         if categories:
             top_category = max(categories, key=lambda c: c.score)
             is_safe = top_category.category == "Safe-Safe"
-        
-        # Calculate overall score
-        # For Safe-Safe category, use inverse score (1 - score) to represent safety
-        # For other categories, use the actual risk score
-        if is_safe and top_category:
-            # Safe content: convert safety score to risk score
-            overall_score = 1.0 - top_category.score
-        else:
-            # Unsafe content: use max risk score
-            overall_score = max([c.score for c in categories if c.category != "Safe-Safe"], default=0.0)
         
         result = DetectionResult(
             is_safe=is_safe,
