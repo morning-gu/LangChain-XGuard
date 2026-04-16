@@ -1,45 +1,88 @@
 # XGuard Policy Configuration Example
 # Save this as `xguard_policy.yaml` and pass to PolicyEngine
+# 
+# This example shows the fine-grained format where you directly specify
+# thresholds for each model output category (e.g., "Cybersecurity-Hacker Attack").
 
 policies:
-  # Default policy - balanced security
+  # Default policy - balanced security with fine-grained control
   default:
     input:
       thresholds:
-        jailbreak: 0.7
-        pii: 0.8
-        toxicity: 0.6
-        compliance: 0.75
-      action: block  # block | rewrite | log_only
+        # Cybersecurity - strict threshold for hacking attempts
+        Cybersecurity-Hacker Attack: 0.5
+        Cybersecurity-Malicious Code: 0.6
+        Cybersecurity-Access Control: 0.7
+        Cybersecurity-Physical Security: 0.7
+        # Data Privacy - protect personal information
+        Data Privacy-Personal Privacy: 0.8
+        Data Privacy-Commercial Secret: 0.8
+        # Hate Speech - moderate sensitivity
+        Hate Speech-Abusive Curses: 0.4
+        Hate Speech-Defamation: 0.5
+        Hate Speech-Threats and Intimidation: 0.4
+        Hate Speech-Cyberbullying: 0.4
+        # Crimes and Illegal Activities
+        Crimes and Illegal Activities-Pornographic Contraband: 0.7
+        Crimes and Illegal Activities-Drug Crimes: 0.7
+        Crimes and Illegal Activities-Dangerous Weapons: 0.6
+        Crimes and Illegal Activities-Property Infringement: 0.7
+        Crimes and Illegal Activities-Economic Crimes: 0.7
+        # Extremism
+        Extremism-Violent Terrorist Activities: 0.5
+        Extremism-Social Disruption: 0.6
+        Extremism-Extremist Ideological Trends: 0.6
+        # Physical and Mental Health
+        Physical and Mental Health-Physical Health: 0.75
+        Physical and Mental Health-Mental Health: 0.75
+        # Ethics and Morality
+        Ethics and Morality-Social Ethics: 0.75
+        Ethics and Morality-Science Ethics: 0.75
+        # Inappropriate Suggestions
+        Inappropriate Suggestions-Finance: 0.75
+        Inappropriate Suggestions-Medicine: 0.75
+        Inappropriate Suggestions-Law: 0.75
+        # Risks Involving Minors - very strict
+        Risks Involving Minors-Corruption of Minors: 0.4
+        Risks Involving Minors-Minor Abuse and Exploitation: 0.3
+        Risks Involving Minors-Minor Delinquency: 0.5
+        # Safe content threshold (low to allow safe content through)
+        Safe-Safe: 0.7
+      action: block
       fallback_message: "Your request cannot be processed due to safety concerns."
     output:
       thresholds:
-        jailbreak: 0.7
-        pii: 0.85
-        toxicity: 0.65
-        compliance: 0.75
-      action: mask  # mask | block | rewrite | log_only
+        # Similar structure for output detection
+        Cybersecurity-Hacker Attack: 0.5
+        Data Privacy-Personal Privacy: 0.85
+        Hate Speech-Abusive Curses: 0.5
+        # ... add other categories as needed
+      action: mask
     enable_context: true
     context_window: 5
     cache_enabled: true
     cache_ttl: 300
 
-  # Strict policy - maximum security
+  # Strict policy - maximum security with fine-grained control
   strict:
     input:
       thresholds:
-        jailbreak: 0.5
-        pii: 0.6
-        toxicity: 0.4
-        compliance: 0.6
+        # Lower thresholds = more sensitive detection
+        Cybersecurity-Hacker Attack: 0.3
+        Cybersecurity-Malicious Code: 0.4
+        Data Privacy-Personal Privacy: 0.6
+        Hate Speech-Abusive Curses: 0.3
+        Hate Speech-Threats and Intimidation: 0.3
+        Risks Involving Minors-Corruption of Minors: 0.2
+        Risks Involving Minors-Minor Abuse and Exploitation: 0.2
+        # ... configure all 25 categories with strict values
       action: block
       fallback_message: "This request violates our safety guidelines."
     output:
       thresholds:
-        jailbreak: 0.5
-        pii: 0.7
-        toxicity: 0.5
-        compliance: 0.6
+        Cybersecurity-Hacker Attack: 0.3
+        Data Privacy-Personal Privacy: 0.7
+        # ... configure all categories
       action: block
     enable_context: true
     context_window: 10
@@ -50,59 +93,41 @@ policies:
   lenient:
     input:
       thresholds:
-        jailbreak: 0.9
-        pii: 0.95
-        toxicity: 0.85
-        compliance: 0.9
+        # Higher thresholds = less sensitive detection
+        Cybersecurity-Hacker Attack: 0.9
+        Data Privacy-Personal Privacy: 0.95
+        Hate Speech-Abusive Curses: 0.85
+        # ... configure all categories with lenient values
       action: log_only
     output:
       thresholds:
-        jailbreak: 0.9
-        pii: 0.95
-        toxicity: 0.85
-        compliance: 0.9
+        Cybersecurity-Hacker Attack: 0.9
+        Data Privacy-Personal Privacy: 0.95
+        # ... configure all categories
       action: log_only
     enable_context: false
     context_window: 0
     cache_enabled: true
     cache_ttl: 120
 
-  # Custom policy with rewrite fallback
-  rewrite_fallback:
-    input:
-      thresholds:
-        jailbreak: 0.7
-        pii: 0.8
-        toxicity: 0.6
-      action: rewrite
-      fallback_llm: "qwen-turbo"  # Use smaller model for safe rewrite
-      fallback_message: "Let me rephrase your request safely..."
-    output:
-      thresholds:
-        compliance: 0.75
-      action: mask
-    enable_context: true
-    context_window: 3
-    cache_enabled: true
-    cache_ttl: 300
-
-  # Customer service specific
+  # Customer service specific - mixed approach
   customer_service:
     input:
       thresholds:
-        jailbreak: 0.6
-        pii: 0.9  # Allow customers to share some info
-        toxicity: 0.5
-        custom:
-          competitor_mention: 0.8
-          pricing_inquiry: 0.3  # Route to sales
+        # Fine-grained control for specific risks
+        Cybersecurity-Hacker Attack: 0.6
+        Data Privacy-Personal Privacy: 0.9  # Allow customers to share some info
+        Hate Speech-Abusive Curses: 0.5
+        # Custom categories for business-specific needs
+        competitor_mention: 0.8
+        pricing_inquiry: 0.3  # Route to sales
       action: log_only
     output:
       thresholds:
-        pii: 0.95  # Never leak customer data
-        compliance: 0.8
-        custom:
-          promise_making: 0.7  # Don't over-promise
+        Data Privacy-Personal Privacy: 0.95  # Never leak customer data
+        Inappropriate Suggestions-Finance: 0.8
+        # Custom categories
+        promise_making: 0.7  # Don't over-promise
       action: mask
     enable_context: true
     context_window: 8
@@ -113,19 +138,22 @@ policies:
   code_assistant:
     input:
       thresholds:
-        jailbreak: 0.75
-        toxicity: 0.7
-        custom:
-          malicious_code_request: 0.8
-          vulnerability_exploit: 0.9
+        # Focus on cybersecurity risks
+        Cybersecurity-Hacker Attack: 0.5
+        Cybersecurity-Malicious Code: 0.5
+        Cybersecurity-Access Control: 0.6
+        Hate Speech-Abusive Curses: 0.7
+        # Custom categories for code security
+        malicious_code_request: 0.8
+        vulnerability_exploit: 0.9
       action: block
       fallback_message: "I cannot help with potentially harmful code requests."
     output:
       thresholds:
-        compliance: 0.8
-        custom:
-          hardcoded_secrets: 0.9
-          insecure_patterns: 0.7
+        Inappropriate Suggestions-Law: 0.8
+        # Custom categories for code quality
+        hardcoded_secrets: 0.9
+        insecure_patterns: 0.7
       action: mask
     enable_context: true
     context_window: 5

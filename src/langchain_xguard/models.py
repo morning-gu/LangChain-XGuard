@@ -53,7 +53,7 @@ class Action(Enum):
 class DetectionCategory(BaseModel):
     """Detection result for a single category."""
     
-    category: str = Field(..., description="Category name (e.g., jailbreak, pii, toxicity)")
+    category: str = Field(..., description="Category name (e.g., Cybersecurity-Hacker Attack, Data Privacy-Personal Privacy)")
     score: float = Field(..., ge=0.0, le=1.0, description="Risk score")
     level: RiskLevel = Field(..., description="Risk level")
     details: Optional[Dict[str, Any]] = Field(default=None, description="Additional details")
@@ -83,74 +83,88 @@ class DetectionResult(BaseModel):
 
 
 class PolicyThresholds(BaseModel):
-    """Threshold configuration for a policy."""
+    """Threshold configuration for a policy.
     
-    jailbreak: float = Field(default=0.7, ge=0.0, le=1.0)
-    pii: float = Field(default=0.8, ge=0.0, le=1.0)
-    toxicity: float = Field(default=0.6, ge=0.0, le=1.0)
-    compliance: float = Field(default=0.75, ge=0.0, le=1.0)
-    custom: Dict[str, float] = Field(default_factory=dict)
+    Uses fine-grained category names directly from model output (YuFeng-XGuard-Reason ID2RISK).
+    Each category can have its own independent threshold for precise risk control.
     
-    # Mapping from model output category names (YuFeng-XGuard-Reason ID2RISK values)
-    # to policy threshold field names. This bridges the gap between the 25 fine-grained
-    # model categories and the 4 coarse-grained policy threshold fields.
-    CATEGORY_TO_THRESHOLD: Dict[str, str] = {
-        # Safe
-        "Safe-Safe": "jailbreak",  # safe content uses lowest sensitivity threshold
-        # Crimes and Illegal Activities -> jailbreak
-        "Crimes and Illegal Activities-Pornographic Contraband": "jailbreak",
-        "Crimes and Illegal Activities-Drug Crimes": "jailbreak",
-        "Crimes and Illegal Activities-Dangerous Weapons": "jailbreak",
-        "Crimes and Illegal Activities-Property Infringement": "jailbreak",
-        "Crimes and Illegal Activities-Economic Crimes": "jailbreak",
-        # Hate Speech -> toxicity
-        "Hate Speech-Abusive Curses": "toxicity",
-        "Hate Speech-Defamation": "toxicity",
-        "Hate Speech-Threats and Intimidation": "toxicity",
-        "Hate Speech-Cyberbullying": "toxicity",
-        # Physical and Mental Health -> compliance
-        "Physical and Mental Health-Physical Health": "compliance",
-        "Physical and Mental Health-Mental Health": "compliance",
-        # Ethics and Morality -> compliance
-        "Ethics and Morality-Social Ethics": "compliance",
-        "Ethics and Morality-Science Ethics": "compliance",
-        # Data Privacy -> pii
-        "Data Privacy-Personal Privacy": "pii",
-        "Data Privacy-Commercial Secret": "pii",
-        # Cybersecurity -> jailbreak
-        "Cybersecurity-Access Control": "jailbreak",
-        "Cybersecurity-Malicious Code": "jailbreak",
-        "Cybersecurity-Hacker Attack": "jailbreak",
-        "Cybersecurity-Physical Security": "jailbreak",
-        # Extremism -> toxicity
-        "Extremism-Violent Terrorist Activities": "toxicity",
-        "Extremism-Social Disruption": "toxicity",
-        "Extremism-Extremist Ideological Trends": "toxicity",
-        # Inappropriate Suggestions -> compliance
-        "Inappropriate Suggestions-Finance": "compliance",
-        "Inappropriate Suggestions-Medicine": "compliance",
-        "Inappropriate Suggestions-Law": "compliance",
-        # Risks Involving Minors -> toxicity
-        "Risks Involving Minors-Corruption of Minors": "toxicity",
-        "Risks Involving Minors-Minor Abuse and Exploitation": "toxicity",
-        "Risks Involving Minors-Minor Delinquency": "toxicity",
-    }
+    Example:
+        thresholds = PolicyThresholds(
+            thresholds={
+                "Cybersecurity-Hacker Attack": 0.5,
+                "Data Privacy-Personal Privacy": 0.8,
+                "Hate Speech-Abusive Curses": 0.4,
+            }
+        )
+    """
+    
+    # All fine-grained thresholds stored in a single dictionary
+    # Keys are model output category names (e.g., "Cybersecurity-Hacker Attack")
+    # Values are threshold scores (0.0 to 1.0)
+    thresholds: Dict[str, float] = Field(
+        default_factory=lambda: {
+            # Safe
+            "Safe-Safe": 0.7,
+            # Crimes and Illegal Activities
+            "Crimes and Illegal Activities-Pornographic Contraband": 0.7,
+            "Crimes and Illegal Activities-Drug Crimes": 0.7,
+            "Crimes and Illegal Activities-Dangerous Weapons": 0.7,
+            "Crimes and Illegal Activities-Property Infringement": 0.7,
+            "Crimes and Illegal Activities-Economic Crimes": 0.7,
+            # Hate Speech
+            "Hate Speech-Abusive Curses": 0.6,
+            "Hate Speech-Defamation": 0.6,
+            "Hate Speech-Threats and Intimidation": 0.6,
+            "Hate Speech-Cyberbullying": 0.6,
+            # Physical and Mental Health
+            "Physical and Mental Health-Physical Health": 0.75,
+            "Physical and Mental Health-Mental Health": 0.75,
+            # Ethics and Morality
+            "Ethics and Morality-Social Ethics": 0.75,
+            "Ethics and Morality-Science Ethics": 0.75,
+            # Data Privacy
+            "Data Privacy-Personal Privacy": 0.8,
+            "Data Privacy-Commercial Secret": 0.8,
+            # Cybersecurity
+            "Cybersecurity-Access Control": 0.7,
+            "Cybersecurity-Malicious Code": 0.7,
+            "Cybersecurity-Hacker Attack": 0.7,
+            "Cybersecurity-Physical Security": 0.7,
+            # Extremism
+            "Extremism-Violent Terrorist Activities": 0.6,
+            "Extremism-Social Disruption": 0.6,
+            "Extremism-Extremist Ideological Trends": 0.6,
+            # Inappropriate Suggestions
+            "Inappropriate Suggestions-Finance": 0.75,
+            "Inappropriate Suggestions-Medicine": 0.75,
+            "Inappropriate Suggestions-Law": 0.75,
+            # Risks Involving Minors
+            "Risks Involving Minors-Corruption of Minors": 0.6,
+            "Risks Involving Minors-Minor Abuse and Exploitation": 0.6,
+            "Risks Involving Minors-Minor Delinquency": 0.6,
+        },
+        description="Fine-grained category thresholds. Keys are model output category names."
+    )
     
     def get_threshold(self, category: str) -> float:
-        """Get threshold for a specific category.
+        """Get threshold for a specific fine-grained category.
         
-        Maps model output category names (e.g., "Cybersecurity-Hacker Attack")
-        to the corresponding policy threshold field (e.g., "jailbreak").
+        Args:
+            category: Model output category name (e.g., "Cybersecurity-Hacker Attack")
+            
+        Returns:
+            Threshold value for the category, or 0.7 as default fallback
         """
-        # First, try direct attribute match (for simple names like "jailbreak")
-        if hasattr(self, category):
-            return getattr(self, category)
-        # Then, try mapping from model category name to threshold field
-        threshold_field = self.CATEGORY_TO_THRESHOLD.get(category)
-        if threshold_field and hasattr(self, threshold_field):
-            return getattr(self, threshold_field)
-        # Finally, check custom thresholds or use default
-        return self.custom.get(category, 0.7)
+        return self.thresholds.get(category, 0.7)
+    
+    def set_threshold(self, category: str, value: float) -> None:
+        """Set threshold for a specific category.
+        
+        Args:
+            category: Model output category name
+            value: Threshold value (0.0 to 1.0)
+        """
+        self.thresholds[category] = value
 
 
 class PolicyConfig(BaseModel):

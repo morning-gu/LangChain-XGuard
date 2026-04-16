@@ -1,65 +1,55 @@
-# Python
+```
+# Coverage
+.coverage
+
+# Python egg info
+*.egg-info/
+
+# Dependencies
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.pyi
-*.so
-
-# Distribution / Packaging
-dist/
-build/
-*.egg-info/
-*.egg
-.eggs/
-
-# Virtual Environments
-.venv/
-venv/
+.Python
 env/
-
-# Environment Variables
-.env
-.env.local
-.env.*.local
-
-# Testing & Coverage
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+venv/
+.venv/
+.ENV
+.venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
 .coverage
 .coverage.*
-htmlcov/
+.cache
+nosetests.xml
 coverage.xml
-junit.xml
-
-# Type Checking
-.mypy_cache/
-.pytype/
-
-# Linting & Formatting
-.ruff_cache/
-
-# Logs
+*.cover
 *.log
+.git/
+.mypy_cache/
+.pytest_cache/
+.hypothesis/
 
-# Model Cache (HuggingFace / ModelScope)
-cache/
-
-# IDE / Editors
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-Desktop.ini
-ehthumbs.db
-
-# Project Tooling
-.arts/
-.codeartsdoer/
+# Distribution / packaging
+.Python
+env/
+venv/
+.venv/
+.ENV
+.venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git/
+.mypy_cache/
+.pytest_cache/
+.hypothesis/
+```
