@@ -4,7 +4,7 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**基于 YuFeng-XGuard-Reason 模型的 LangChain/LlamaIndex 原生安全中间件，支持流式安全拦截和策略即代码。**
+**基于 YuFeng-XGuard-Reason 模型的 LangChain 原生安全中间件，支持流式安全拦截和策略即代码。**
 
 仅需 **5 行代码** 即可为任何 LLM 应用添加企业级 AI 安全防护 —— 零侵入集成、流式支持和统一的策略管理。
 
@@ -42,8 +42,7 @@ result = await pipeline.ainvoke({"input": "用户原始提问"})
 | 🧠 **上下文感知** | 多轮对话历史追踪，越狱检测准确率提升 23% |
 | 🤖 **YuFeng-XGuard 驱动** | 本地推理阿里巴巴 YuFeng-XGuard-Reason 模型（0.6B/8B） |
 | 📊 **29 个风险类别** | 全面的安全分类体系，涵盖犯罪、仇恨言论、隐私、伦理等 |
-| 📜 **策略即代码** | YAML/JSON 策略配置，支持热重载、A/B 测试和版本回滚 |
-| 📈 **可观测性** | 自动 LangSmith 追踪 + OpenTelemetry 指标 + 审计日志 |
+| 📜 **策略即代码** | YAML/JSON 策略配置，支持热重载和版本回滚 |
 | 🛡️ **企业就绪** | 异步非阻塞、本地缓存、批处理、降级机制 |
 
 ## 🏗️ 架构设计
@@ -58,7 +57,7 @@ result = await pipeline.ainvoke({"input": "用户原始提问"})
          │ （安全检查通过 / 已过滤）
          ▼
 ┌─────────────────┐
-│   LLM 节点      │ ◄── 任意 LangChain/LlamaIndex 模型节点
+│   LLM 节点      │ ◄── 任意 LangChain 模型节点
 └────────┬────────┘
          │ （流式 / 非流式响应）
          ▼
@@ -68,11 +67,6 @@ result = await pipeline.ainvoke({"input": "用户原始提问"})
          │
          ▼
 最终用户响应
-         │
-         ▼
-┌─────────────────┐
-│  可观测性系统   │ ◄── LangSmith 追踪 / Prometheus 指标 / 审计日志
-└─────────────────┘
 ```
 
 ## 📦 安装
@@ -96,11 +90,11 @@ pip install -e ".[dev]"
 - Python 3.9+
 - `langchain-core>=0.2.0`
 - `langchain>=0.1.0`
-- `transformers>=4.40.0`（用于 YuFeng-XGuard 模型）
-- `torch>=2.0.0`
 - `pyyaml>=6.0`
 - `httpx>=0.25.0`
 - `pydantic>=2.0.0`
+- `transformers>=4.40.0`（用于 YuFeng-XGuard 模型）
+- `torch>=2.0.0`
 
 ## 🎯 使用示例
 
@@ -256,37 +250,6 @@ YuFeng-XGuard 提供跨 29 个风险类别的全面覆盖：
 | **P99 开销** | 不稳定 | <45ms | **可预测** |
 | **吞吐量** | 基准 | 95%+ | **影响极小** |
 
-*完整基准测试见 [docs/BENCHMARKS.md](docs/BENCHMARKS.md)*
-
-## 🔍 可观测性
-
-### LangSmith 集成
-
-XGuard 自动发射与 LangSmith 兼容的追踪数据：
-
-```python
-from langsmith import Client
-
-client = Client()
-# 追踪数据包括：
-# - 每轮检测结果
-# - 执行的策略动作
-# - 各类别风险分数
-# - 延迟分解
-```
-
-### OpenTelemetry 指标
-
-```python
-from opentelemetry import metrics
-
-# 可用指标：
-# - xguard.detection.count（检测总数）
-# - xguard.detection.latency（检测延迟直方图）
-# - xguard.action.count（按类型的动作计数）
-# - xguard.cache.hit_rate（缓存命中率）
-```
-
 ## 🧪 测试
 
 ```bash
@@ -295,19 +258,7 @@ pytest tests/ -v --cov=langchain_xguard
 
 # 运行并生成覆盖率报告
 pytest tests/ --cov=langchain_xguard --cov-report=html
-
-# 运行流式压力测试
-python tests/test_streaming_benchmark.py
 ```
-
-## 📚 文档
-
-- [快速入门指南](docs/USAGE_GUIDE.md)
-- [API 参考](docs/API_REFERENCE.md)
-- [策略配置](docs/POLICY_CONFIG.md)
-- [YuFeng-XGuard 集成](docs/YUFENG_XGUARD.md)
-- [最佳实践](docs/BEST_PRACTICES.md)
-- [技术报告](docs/TECH_REPORT.md)
 
 ## 🛣️ 路线图
 
@@ -320,7 +271,7 @@ python tests/test_streaming_benchmark.py
 
 ## 🤝 贡献
 
-我们欢迎贡献！详见 [贡献指南](CONTRIBUTING.md)。
+我们欢迎贡献！
 
 ```bash
 # 开发环境设置
@@ -336,20 +287,7 @@ pytest tests/ -v
 
 ## 📄 许可证
 
-MIT 许可证 - 详见 [LICENSE](LICENSE)。
-
-## 🙏 致谢
-
-- 基于 [LangChain](https://github.com/langchain-ai/langchain) 构建
-- 由阿里巴巴 AAIG 的 [YuFeng-XGuard-Reason](https://modelscope.cn/models/Alibaba-AAIG/YuFeng-XGuard-Reason-0.6B) 驱动
-- 受 [Guardrails AI](https://github.com/guardrails-ai/guardrails) 启发
-- 安全研究来自 [JailbreakBench](https://jailbreakbench.com/)
-
-## 📬 联系方式
-
-- **GitHub Issues**: [报告错误或请求功能](https://github.com/xguard/langchain-xguard/issues)
-- **讨论区**: [参与讨论](https://github.com/xguard/langchain-xguard/discussions)
-- **邮箱**: xguard@example.com
+MIT 许可证
 
 ---
 

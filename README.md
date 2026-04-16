@@ -4,7 +4,7 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**LangChain/LlamaIndex native security middleware powered by YuFeng-XGuard-Reason model with streaming safety interception and policy-as-code.**
+**LangChain native security middleware powered by YuFeng-XGuard-Reason model with streaming safety interception and policy-as-code.**
 
 Add enterprise-grade AI safety guards to any LLM application in **5 lines of code** — zero-intrusion integration, streaming support, and unified policy management.
 
@@ -42,8 +42,7 @@ result = await pipeline.ainvoke({"input": "User query"})
 | 🧠 **Context-Aware** | Multi-turn conversation history for improved jailbreak detection (+23% accuracy) |
 | 🤖 **YuFeng-XGuard Powered** | Local inference with Alibaba's YuFeng-XGuard-Reason model (0.6B/8B) |
 | 📊 **29 Risk Categories** | Comprehensive safety taxonomy covering crimes, hate speech, privacy, ethics, and more |
-| 📜 **Policy-as-Code** | YAML/JSON policies with hot reload, A/B testing, and version rollback |
-| 📈 **Observability** | Auto LangSmith tracing + OpenTelemetry metrics + audit logging |
+| 📜 **Policy-as-Code** | YAML/JSON policies with hot reload and version rollback |
 | 🛡️ **Enterprise Ready** | Async non-blocking, local caching, batch processing, fallback mechanisms |
 
 ## 🏗️ Architecture
@@ -58,7 +57,7 @@ User Request
          │ (Safety checked / Filtered)
          ▼
 ┌─────────────────┐
-│   LLM Runnable  │ ◄── Any LangChain/LlamaIndex model node
+│   LLM Runnable  │ ◄── Any LangChain model node
 └────────┬────────┘
          │ (Streaming / Non-streaming response)
          ▼
@@ -68,11 +67,6 @@ User Request
          │
          ▼
 End User Response
-         │
-         ▼
-┌─────────────────┐
-│  Observability  │ ◄── LangSmith Trace / Prometheus Metrics / Audit Log
-└─────────────────┘
 ```
 
 ## 📦 Installation
@@ -96,11 +90,11 @@ pip install -e ".[dev]"
 - Python 3.9+
 - `langchain-core>=0.2.0`
 - `langchain>=0.1.0`
-- `transformers>=4.40.0` (for YuFeng-XGuard model)
-- `torch>=2.0.0`
 - `pyyaml>=6.0`
 - `httpx>=0.25.0`
 - `pydantic>=2.0.0`
+- `transformers>=4.40.0` (for YuFeng-XGuard model)
+- `torch>=2.0.0`
 
 ## 🎯 Usage Examples
 
@@ -256,37 +250,6 @@ YuFeng-XGuard provides comprehensive coverage across 29 risk categories:
 | **P99 Overhead** | Variable | <45ms | **Predictable** |
 | **Throughput** | Baseline | 95%+ | **Minimal impact** |
 
-*Full benchmarks in [docs/BENCHMARKS.md](docs/BENCHMARKS.md)*
-
-## 🔍 Observability
-
-### LangSmith Integration
-
-XGuard automatically emits traces compatible with LangSmith:
-
-```python
-from langsmith import Client
-
-client = Client()
-# Traces include:
-# - Detection results per turn
-# - Policy actions taken
-# - Risk scores by category
-# - Latency breakdown
-```
-
-### OpenTelemetry Metrics
-
-```python
-from opentelemetry import metrics
-
-# Available metrics:
-# - xguard.detection.count (total detections)
-# - xguard.detection.latency (detection latency histogram)
-# - xguard.action.count (actions by type)
-# - xguard.cache.hit_rate (cache effectiveness)
-```
-
 ## 🧪 Testing
 
 ```bash
@@ -295,19 +258,7 @@ pytest tests/ -v --cov=langchain_xguard
 
 # Run with coverage report
 pytest tests/ --cov=langchain_xguard --cov-report=html
-
-# Run streaming stress test
-python tests/test_streaming_benchmark.py
 ```
-
-## 📚 Documentation
-
-- [Quick Start Guide](docs/USAGE_GUIDE.md)
-- [API Reference](docs/API_REFERENCE.md)
-- [Policy Configuration](docs/POLICY_CONFIG.md)
-- [YuFeng-XGuard Integration](docs/YUFENG_XGUARD.md)
-- [Best Practices](docs/BEST_PRACTICES.md)
-- [Technical Report](docs/TECH_REPORT.md)
 
 ## 🛣️ Roadmap
 
@@ -320,7 +271,7 @@ python tests/test_streaming_benchmark.py
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions!
 
 ```bash
 # Development setup
@@ -336,21 +287,8 @@ pytest tests/ -v
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) for details.
-
-## 🙏 Acknowledgments
-
-- Built on [LangChain](https://github.com/langchain-ai/langchain)
-- Powered by [YuFeng-XGuard-Reason](https://modelscope.cn/models/Alibaba-AAIG/YuFeng-XGuard-Reason-0.6B) from Alibaba AAIG
-- Inspired by [Guardrails AI](https://github.com/guardrails-ai/guardrails)
-- Security research from [JailbreakBench](https://jailbreakbench.com/)
-
-## 📬 Contact
-
-- **GitHub Issues**: [Report bugs or feature requests](https://github.com/xguard/langchain-xguard/issues)
-- **Discussions**: [Join the conversation](https://github.com/xguard/langchain-xguard/discussions)
-- **Email**: xguard@example.com
+MIT License
 
 ---
 
-**🚀 First to market with streaming safety interruption + policy-as-code for LangChain!**
+**🚀 First to market with streaming safety interception + policy-as-code for LangChain!**
