@@ -159,25 +159,38 @@ policies:
   default:
     input:
       thresholds:
-        jailbreak: 0.7
-        pii: 0.8
-        toxicity: 0.6
+        Cybersecurity-Hacker Attack: 0.5
+        Cybersecurity-Malicious Code: 0.6
+        Data Privacy-Personal Privacy: 0.8
+        Hate Speech-Abusive Curses: 0.4
+        Crimes and Illegal Activities-Dangerous Weapons: 0.6
+        Risks Involving Minors-Corruption of Minors: 0.4
       action: block
+      fallback_message: "Your request cannot be processed due to safety concerns."
     output:
       thresholds:
-        compliance: 0.75
+        Cybersecurity-Hacker Attack: 0.5
+        Data Privacy-Personal Privacy: 0.85
+        Hate Speech-Abusive Curses: 0.5
       action: mask
     enable_context: true
     context_window: 5
+    cache_enabled: true
+    cache_ttl: 300
   
   strict:
     input:
       thresholds:
-        jailbreak: 0.5
-        pii: 0.6
+        Cybersecurity-Hacker Attack: 0.3
+        Data Privacy-Personal Privacy: 0.6
+        Hate Speech-Abusive Curses: 0.3
+        Risks Involving Minors-Corruption of Minors: 0.2
       action: block
+      fallback_message: "This request violates our safety guidelines."
     output:
       action: block
+    enable_context: true
+    context_window: 10
 ```
 
 ```python
@@ -240,16 +253,6 @@ YuFeng-XGuard 提供跨 29 个风险类别的全面覆盖：
 | **不当建议** | 金融、医疗、法律 |
 | **未成年人风险** | 未成年人腐化、未成年人虐待与剥削、未成年人不良行为 |
 
-## 📊 性能基准测试
-
-| 指标 | 手动集成 | langchain-xguard | 改进 |
-|--------|-------------------|------------------|-------------|
-| **代码行数** | ~50+ | 5 | **减少>80%** |
-| **流式中断延迟** | 不支持 | <150ms | **原生支持** |
-| **多轮越狱检测 F1** | 0.72 | 0.89 | **+23%** |
-| **P99 开销** | 不稳定 | <45ms | **可预测** |
-| **吞吐量** | 基准 | 95%+ | **影响极小** |
-
 ## 🧪 测试
 
 ```bash
@@ -259,15 +262,6 @@ pytest tests/ -v --cov=langchain_xguard
 # 运行并生成覆盖率报告
 pytest tests/ --cov=langchain_xguard --cov-report=html
 ```
-
-## 🛣️ 路线图
-
-| 版本 | 时间线 | 功能 |
-|---------|----------|----------|
-| v0.1.0 | 第 1 周 | MVP：LCEL 集成、同步检测、策略解析 |
-| v0.2.0 | 第 2 周 | 流式支持、异步非阻塞、上下文状态 |
-| v0.3.0 | 第 3 周 | 热重载、LangSmith 集成、降级机制 |
-| v0.4.0 | 第 4 周 | 完整文档、基准测试、演示视频 |
 
 ## 🤝 贡献
 

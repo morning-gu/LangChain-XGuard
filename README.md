@@ -159,25 +159,38 @@ policies:
   default:
     input:
       thresholds:
-        jailbreak: 0.7
-        pii: 0.8
-        toxicity: 0.6
+        Cybersecurity-Hacker Attack: 0.5
+        Cybersecurity-Malicious Code: 0.6
+        Data Privacy-Personal Privacy: 0.8
+        Hate Speech-Abusive Curses: 0.4
+        Crimes and Illegal Activities-Dangerous Weapons: 0.6
+        Risks Involving Minors-Corruption of Minors: 0.4
       action: block
+      fallback_message: "Your request cannot be processed due to safety concerns."
     output:
       thresholds:
-        compliance: 0.75
+        Cybersecurity-Hacker Attack: 0.5
+        Data Privacy-Personal Privacy: 0.85
+        Hate Speech-Abusive Curses: 0.5
       action: mask
     enable_context: true
     context_window: 5
+    cache_enabled: true
+    cache_ttl: 300
   
   strict:
     input:
       thresholds:
-        jailbreak: 0.5
-        pii: 0.6
+        Cybersecurity-Hacker Attack: 0.3
+        Data Privacy-Personal Privacy: 0.6
+        Hate Speech-Abusive Curses: 0.3
+        Risks Involving Minors-Corruption of Minors: 0.2
       action: block
+      fallback_message: "This request violates our safety guidelines."
     output:
       action: block
+    enable_context: true
+    context_window: 10
 ```
 
 ```python
@@ -240,16 +253,6 @@ YuFeng-XGuard provides comprehensive coverage across 29 risk categories:
 | **Inappropriate Suggestions** | Finance, Medicine, Law |
 | **Risks Involving Minors** | Corruption of Minors, Minor Abuse & Exploitation, Minor Delinquency |
 
-## 📊 Performance Benchmarks
-
-| Metric | Manual Integration | langchain-xguard | Improvement |
-|--------|-------------------|------------------|-------------|
-| **Code Lines** | ~50+ | 5 | **>80% reduction** |
-| **Stream Interrupt Latency** | N/A | <150ms | **Native support** |
-| **Multi-turn Jailbreak F1** | 0.72 | 0.89 | **+23%** |
-| **P99 Overhead** | Variable | <45ms | **Predictable** |
-| **Throughput** | Baseline | 95%+ | **Minimal impact** |
-
 ## 🧪 Testing
 
 ```bash
@@ -259,15 +262,6 @@ pytest tests/ -v --cov=langchain_xguard
 # Run with coverage report
 pytest tests/ --cov=langchain_xguard --cov-report=html
 ```
-
-## 🛣️ Roadmap
-
-| Version | Timeline | Features |
-|---------|----------|----------|
-| v0.1.0 | Week 1 | MVP: LCEL integration, sync detection, policy parsing |
-| v0.2.0 | Week 2 | Streaming support, async non-blocking, context state |
-| v0.3.0 | Week 3 | Hot reload, LangSmith integration, fallback mechanisms |
-| v0.4.0 | Week 4 | Full documentation, benchmarks, demo videos |
 
 ## 🤝 Contributing
 
