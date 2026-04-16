@@ -70,7 +70,7 @@ class TestDetectionResult:
             overall_score=0.75,
             categories=[
                 DetectionCategory(
-                    category="jailbreak",
+                    category="Cybersecurity-Hacker Attack",
                     score=0.8,
                     level=RiskLevel.HIGH,
                 )
@@ -98,14 +98,14 @@ class TestDetectionResult:
             overall_level=RiskLevel.HIGH,
             overall_score=0.75,
             categories=[
-                DetectionCategory(category="toxicity", score=0.5, level=RiskLevel.MEDIUM),
-                DetectionCategory(category="jailbreak", score=0.8, level=RiskLevel.HIGH),
-                DetectionCategory(category="pii", score=0.6, level=RiskLevel.MEDIUM),
+                DetectionCategory(category="Hate Speech-Abusive Curses", score=0.5, level=RiskLevel.MEDIUM),
+                DetectionCategory(category="Cybersecurity-Hacker Attack", score=0.8, level=RiskLevel.HIGH),
+                DetectionCategory(category="Data Privacy-Personal Privacy", score=0.6, level=RiskLevel.MEDIUM),
             ],
         )
         highest = result.get_highest_risk_category()
         assert highest is not None
-        assert highest.category == "jailbreak"
+        assert highest.category == "Cybersecurity-Hacker Attack"
         assert highest.score == 0.8
 
 
@@ -115,44 +115,50 @@ class TestPolicyThresholds:
     def test_default_thresholds(self):
         """Test default threshold values."""
         thresholds = PolicyThresholds()
-        assert thresholds.jailbreak == 0.7
-        assert thresholds.pii == 0.8
-        assert thresholds.toxicity == 0.6
-        assert thresholds.compliance == 0.75
+        # Check that we have fine-grained thresholds for all 29 categories
+        assert len(thresholds.thresholds) == 29
+        # Check specific default values
+        assert thresholds.get_threshold("Cybersecurity-Hacker Attack") == 0.7
+        assert thresholds.get_threshold("Data Privacy-Personal Privacy") == 0.8
+        assert thresholds.get_threshold("Hate Speech-Abusive Curses") == 0.6
+        assert thresholds.get_threshold("Inappropriate Suggestions-Finance") == 0.75
     
-    def test_get_threshold_builtin(self):
-        """Test getting built-in category thresholds."""
-        thresholds = PolicyThresholds(jailbreak=0.5)
-        assert thresholds.get_threshold("jailbreak") == 0.5
-        assert thresholds.get_threshold("pii") == 0.8  # default
+    def test_get_threshold_fine_grained(self):
+        """Test getting fine-grained category thresholds."""
+        thresholds = PolicyThresholds(
+            thresholds={"Cybersecurity-Hacker Attack": 0.5}
+        )
+        assert thresholds.get_threshold("Cybersecurity-Hacker Attack") == 0.5
+        # When only partial thresholds provided, others use default fallback
+        assert thresholds.get_threshold("Data Privacy-Personal Privacy") == 0.7  # default fallback
     
     def test_get_threshold_custom(self):
-        """Test getting custom category thresholds."""
-        thresholds = PolicyThresholds(
-            custom={"competitor_mention": 0.8}
-        )
+        """Test getting custom category thresholds via set_threshold."""
+        thresholds = PolicyThresholds()
+        # Set custom category threshold
+        thresholds.set_threshold("competitor_mention", 0.8)
         assert thresholds.get_threshold("competitor_mention") == 0.8
         assert thresholds.get_threshold("unknown") == 0.7  # default fallback
     
-    def test_get_threshold_model_category_mapping(self):
-        """Test mapping from model output category names to threshold fields."""
+    def test_set_threshold(self):
+        """Test setting threshold for a category."""
         thresholds = PolicyThresholds()
-        # Cybersecurity categories map to jailbreak threshold
+        # Set existing category
+        thresholds.set_threshold("Cybersecurity-Hacker Attack", 0.5)
+        assert thresholds.get_threshold("Cybersecurity-Hacker Attack") == 0.5
+        # Set new custom category
+        thresholds.set_threshold("custom_category", 0.9)
+        assert thresholds.get_threshold("custom_category") == 0.9
+    
+    def test_get_threshold_model_category_mapping(self):
+        """Test that fine-grained categories work correctly."""
+        thresholds = PolicyThresholds()
+        # All categories should have their default values
         assert thresholds.get_threshold("Cybersecurity-Hacker Attack") == 0.7
         assert thresholds.get_threshold("Cybersecurity-Malicious Code") == 0.7
-        # Data Privacy categories map to pii threshold
         assert thresholds.get_threshold("Data Privacy-Personal Privacy") == 0.8
-        # Hate Speech categories map to toxicity threshold
         assert thresholds.get_threshold("Hate Speech-Abusive Curses") == 0.6
-        # Compliance categories
         assert thresholds.get_threshold("Inappropriate Suggestions-Finance") == 0.75
-    
-    def test_get_threshold_model_category_with_custom_values(self):
-        """Test model category mapping with custom threshold values."""
-        thresholds = PolicyThresholds(jailbreak=0.5, pii=0.6, toxicity=0.4, compliance=0.5)
-        assert thresholds.get_threshold("Cybersecurity-Hacker Attack") == 0.5
-        assert thresholds.get_threshold("Data Privacy-Personal Privacy") == 0.6
-        assert thresholds.get_threshold("Hate Speech-Abusive Curses") == 0.4
 
 
 class TestPolicyActionResult:
@@ -319,7 +325,8 @@ class TestPolicyEngine:
         assert policy.name == "test_policy"
         assert policy.input_action == Action.BLOCK
         assert policy.output_action == Action.MASK
-        assert policy.input_thresholds.jailbreak == 0.6
+        # Check fine-grained threshold for a specific category
+        assert policy.input_thresholds.get_threshold("Cybersecurity-Hacker Attack") == 0.6
     
     def test_get_policy(self):
         """Test retrieving policies."""
@@ -328,7 +335,7 @@ class TestPolicyEngine:
         
         policy = engine.get_policy("custom")
         assert policy.name == "custom"
-        assert policy.input_thresholds.jailbreak == 0.5
+        assert policy.input_thresholds.get_threshold("Cybersecurity-Hacker Attack") == 0.5
         
         # Default fallback
         default_policy = engine.get_policy()
@@ -376,7 +383,7 @@ class TestPolicyEngine:
             overall_score=0.8,
             categories=[
                 DetectionCategory(
-                    category="jailbreak",
+                    category="Cybersecurity-Hacker Attack",
                     score=0.8,
                     level=RiskLevel.HIGH,
                 )

@@ -417,7 +417,7 @@ class XGuardOutputMiddleware(XGuardMiddleware):
                 should_interrupt, result = await self.client.detect_stream_chunk_async(
                     chunk="",
                     buffer=buffer,
-                    threshold=policy.output_thresholds.compliance,
+                    threshold=0.7,  # Default threshold for streaming detection
                     session_id=session_id,
                 )
                 

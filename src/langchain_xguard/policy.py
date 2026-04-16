@@ -122,27 +122,15 @@ class PolicyEngine:
         input_config = config.get("input", {})
         output_config = config.get("output", {})
         
-        # Parse thresholds
+        # Parse thresholds - use fine-grained format directly
         input_thresholds_data = input_config.get("thresholds", {})
         output_thresholds_data = output_config.get("thresholds", {})
         
         from langchain_xguard.models import PolicyThresholds
         
-        input_thresholds = PolicyThresholds(
-            jailbreak=input_thresholds_data.get("jailbreak", 0.7),
-            pii=input_thresholds_data.get("pii", 0.8),
-            toxicity=input_thresholds_data.get("toxicity", 0.6),
-            compliance=input_thresholds_data.get("compliance", 0.75),
-            custom=input_thresholds_data.get("custom", {}),
-        )
-        
-        output_thresholds = PolicyThresholds(
-            jailbreak=output_thresholds_data.get("jailbreak", 0.7),
-            pii=output_thresholds_data.get("pii", 0.8),
-            toxicity=output_thresholds_data.get("toxicity", 0.6),
-            compliance=output_thresholds_data.get("compliance", 0.75),
-            custom=output_thresholds_data.get("custom", {}),
-        )
+        # Direct fine-grained thresholds
+        input_thresholds = PolicyThresholds(thresholds=input_thresholds_data)
+        output_thresholds = PolicyThresholds(thresholds=output_thresholds_data)
         
         # Parse action
         input_action_str = input_config.get("action", "block")
@@ -277,30 +265,88 @@ class PolicyEngine:
             name: Policy name
             input_action: Action for input detection
             output_action: Action for output detection
-            input_threshold: Default threshold for input
-            output_threshold: Default threshold for output
+            input_threshold: Default threshold for all input categories
+            output_threshold: Default threshold for all output categories
             
         Returns:
             PolicyConfig object
         """
         from langchain_xguard.models import PolicyThresholds
         
+        # Use fine-grained thresholds - each category can have its own threshold
+        # Default all to the provided threshold value, user can customize after creation
+        default_input_thresholds = {
+            "Safe-Safe": input_threshold,
+            "Crimes and Illegal Activities-Pornographic Contraband": input_threshold,
+            "Crimes and Illegal Activities-Drug Crimes": input_threshold,
+            "Crimes and Illegal Activities-Dangerous Weapons": input_threshold,
+            "Crimes and Illegal Activities-Property Infringement": input_threshold,
+            "Crimes and Illegal Activities-Economic Crimes": input_threshold,
+            "Hate Speech-Abusive Curses": input_threshold,
+            "Hate Speech-Defamation": input_threshold,
+            "Hate Speech-Threats and Intimidation": input_threshold,
+            "Hate Speech-Cyberbullying": input_threshold,
+            "Physical and Mental Health-Physical Health": input_threshold,
+            "Physical and Mental Health-Mental Health": input_threshold,
+            "Ethics and Morality-Social Ethics": input_threshold,
+            "Ethics and Morality-Science Ethics": input_threshold,
+            "Data Privacy-Personal Privacy": input_threshold,
+            "Data Privacy-Commercial Secret": input_threshold,
+            "Cybersecurity-Access Control": input_threshold,
+            "Cybersecurity-Malicious Code": input_threshold,
+            "Cybersecurity-Hacker Attack": input_threshold,
+            "Cybersecurity-Physical Security": input_threshold,
+            "Extremism-Violent Terrorist Activities": input_threshold,
+            "Extremism-Social Disruption": input_threshold,
+            "Extremism-Extremist Ideological Trends": input_threshold,
+            "Inappropriate Suggestions-Finance": input_threshold,
+            "Inappropriate Suggestions-Medicine": input_threshold,
+            "Inappropriate Suggestions-Law": input_threshold,
+            "Risks Involving Minors-Corruption of Minors": input_threshold,
+            "Risks Involving Minors-Minor Abuse and Exploitation": input_threshold,
+            "Risks Involving Minors-Minor Delinquency": input_threshold,
+        }
+        input_thresholds_obj = PolicyThresholds(thresholds=default_input_thresholds)
+        
+        default_output_thresholds = {
+            "Safe-Safe": output_threshold,
+            "Crimes and Illegal Activities-Pornographic Contraband": output_threshold,
+            "Crimes and Illegal Activities-Drug Crimes": output_threshold,
+            "Crimes and Illegal Activities-Dangerous Weapons": output_threshold,
+            "Crimes and Illegal Activities-Property Infringement": output_threshold,
+            "Crimes and Illegal Activities-Economic Crimes": output_threshold,
+            "Hate Speech-Abusive Curses": output_threshold,
+            "Hate Speech-Defamation": output_threshold,
+            "Hate Speech-Threats and Intimidation": output_threshold,
+            "Hate Speech-Cyberbullying": output_threshold,
+            "Physical and Mental Health-Physical Health": output_threshold,
+            "Physical and Mental Health-Mental Health": output_threshold,
+            "Ethics and Morality-Social Ethics": output_threshold,
+            "Ethics and Morality-Science Ethics": output_threshold,
+            "Data Privacy-Personal Privacy": output_threshold,
+            "Data Privacy-Commercial Secret": output_threshold,
+            "Cybersecurity-Access Control": output_threshold,
+            "Cybersecurity-Malicious Code": output_threshold,
+            "Cybersecurity-Hacker Attack": output_threshold,
+            "Cybersecurity-Physical Security": output_threshold,
+            "Extremism-Violent Terrorist Activities": output_threshold,
+            "Extremism-Social Disruption": output_threshold,
+            "Extremism-Extremist Ideological Trends": output_threshold,
+            "Inappropriate Suggestions-Finance": output_threshold,
+            "Inappropriate Suggestions-Medicine": output_threshold,
+            "Inappropriate Suggestions-Law": output_threshold,
+            "Risks Involving Minors-Corruption of Minors": output_threshold,
+            "Risks Involving Minors-Minor Abuse and Exploitation": output_threshold,
+            "Risks Involving Minors-Minor Delinquency": output_threshold,
+        }
+        output_thresholds_obj = PolicyThresholds(thresholds=default_output_thresholds)
+        
         policy = PolicyConfig(
             name=name,
             input_action=input_action,
             output_action=output_action,
-            input_thresholds=PolicyThresholds(
-                jailbreak=input_threshold,
-                pii=input_threshold,
-                toxicity=input_threshold,
-                compliance=input_threshold,
-            ),
-            output_thresholds=PolicyThresholds(
-                jailbreak=output_threshold,
-                pii=output_threshold,
-                toxicity=output_threshold,
-                compliance=output_threshold,
-            ),
+            input_thresholds=input_thresholds_obj,
+            output_thresholds=output_thresholds_obj,
         )
         
         self._policies[name] = policy
